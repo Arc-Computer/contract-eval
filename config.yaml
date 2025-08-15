@@ -30,7 +30,7 @@ models:
     
   baselines:
     gpt5:
-      model: "gpt-5"  # GPT-5 released August 2025, using main reasoning model
+      model: "gpt-5"  # GPT-5 standard model released August 2025
       temperature: 0.3
       max_tokens: 8000  # Match teacher-student capacity
     claude:

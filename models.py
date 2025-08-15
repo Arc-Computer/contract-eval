@@ -5,7 +5,6 @@ import logging
 from typing import Dict, Any, List
 from pathlib import Path
 from openai import OpenAI
-import openai
 import anthropic
 import google.generativeai as genai
 
@@ -48,7 +47,7 @@ class BaselineModels:
         self.config = config
         
         # Initialize API clients
-        self.openai_client = openai.OpenAI(api_key=config['api_keys']['openai'])
+        self.openai_client = OpenAI(api_key=config['api_keys']['openai'])
         self.anthropic_client = anthropic.Anthropic(api_key=config['api_keys']['anthropic'])
         genai.configure(api_key=config['api_keys']['google'])
         
