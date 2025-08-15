@@ -13,3 +13,4 @@ psutil
 gpustat
 pyyaml
 python-dotenv
+vllm
