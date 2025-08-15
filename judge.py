@@ -26,37 +26,65 @@ class GeminiJudge:
     ) -> Dict[str, Any]:
         """Evaluate all contract generations and determine winner."""
         
-        judge_prompt = f"""You are an expert legal contract evaluator. Your task is to compare three contract generations against a golden standard and determine which one is best.
+        judge_prompt = f"""You are a senior business professional with 20 years of experience reviewing contracts and business documents.
 
-ORIGINAL REQUEST:
+THE REQUEST TO FULFILL:
 {prompt}
 
-GOLDEN STANDARD (Contains both expert thinking process and ideal contract):
+EXPERT'S IDEAL APPROACH (Golden Standard):
 {thinking_trace}
 
-SUBMISSIONS TO EVALUATE:
+Now evaluate these three attempts to fulfill the same request:
 
-=== SUBMISSION A: Teacher-Student Approach ===
+========================================
+SUBMISSION A (Teacher-Student Approach):
+========================================
 {teacher_student_contract}
 
-=== SUBMISSION B: GPT-5 Direct Generation ===
+========================================
+SUBMISSION B (GPT-5):
+========================================
 {gpt5_contract}
 
-=== SUBMISSION C: Claude Opus Direct Generation ===
+========================================
+SUBMISSION C (Claude Opus):
+========================================
 {claude_contract}
 
-EVALUATION INSTRUCTIONS:
-1. The golden standard contains both the thinking process and the ideal contract structure
-2. Evaluate each submission based on how well it captures the intent and quality shown in the golden standard
-3. Consider these criteria:
-   - Legal completeness and accuracy
-   - Alignment with the requirements in the original request
-   - Professional structure and formatting
-   - Clarity and precision of language
-   - Coverage of important clauses and provisions
-   - Risk mitigation and protection for relevant parties
+========================================
+EVALUATION FRAMEWORK:
+========================================
 
-IMPORTANT: You must choose exactly ONE winner. Even if submissions are similar in quality, pick the one that best matches the golden standard.
+AS A BUSINESS PROFESSIONAL, EVALUATE BASED ON:
+
+1. **COMPLETENESS** (50% weight)
+   - Does it address EVERY requirement from the original request?
+   - Are all dates, technical specs, pricing models, names mentioned in the request included?
+   - Would you need to ask for any clarifications before using this document?
+
+2. **BUSINESS VIABILITY** (30% weight)
+   - Is this the right type of document for the request?
+   - Would this hold up in a real business scenario?
+   - Does it protect the relevant parties?
+   - Are the terms clear and enforceable?
+
+3. **PROFESSIONAL SUBSTANCE** (20% weight)
+   - Does it demonstrate understanding of the business context?
+   - Are industry-specific requirements properly addressed?
+   - Is it comprehensive enough for the scenario?
+
+EXPLICITLY IGNORE (NO PENALTY):
+- Formatting differences (bullets, numbering, spacing)
+- Length (a comprehensive 20-page contract can be better than a 2-page summary)
+- Minor stylistic choices
+- Whether sections are numbered or bulleted
+
+FOCUS ONLY ON:
+- Did they deliver what was asked?
+- Is anything critical missing?
+- Would you sign/approve this in real life?
+
+Note: In real business, thoroughness beats brevity. A complete document is always preferred over a pretty but incomplete one.
 
 Provide your evaluation in the following JSON format:
 {{

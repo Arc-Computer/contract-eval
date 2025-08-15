@@ -56,13 +56,29 @@ class BaselineModels:
         """Generate contract using GPT-5."""
         model_name = self.config['models']['baselines']['gpt5']['model']
         
+        # Enhanced prompt to match teacher-student capability
+        enhanced_prompt = f"""You are an expert in creating professional business documents and contracts.
+
+Task: {prompt}
+
+Approach this systematically:
+1. Analyze all requirements and constraints in the request
+2. Identify the document type and appropriate structure
+3. Include all specified elements (deadlines, technical requirements, pricing models, etc.)
+4. Ensure completeness - every requirement must be addressed
+5. Use professional language and industry-standard formatting
+
+Generate a complete, professional document that fully addresses all requirements. Think step-by-step to ensure nothing is missed.
+
+Output the document directly (no meta-commentary or explanations):"""
+        
         try:
             response = api_call_with_retry(
                 self.openai_client.chat.completions.create,
                 model=model_name,
                 messages=[
-                    {"role": "system", "content": "You are an expert legal contract writer. Generate professional, comprehensive contracts."},
-                    {"role": "user", "content": f"Generate a complete legal contract for: {prompt}"}
+                    {"role": "system", "content": "You are a professional document creator specializing in contracts, agreements, and business documentation."},
+                    {"role": "user", "content": enhanced_prompt}
                 ],
                 max_tokens=self.config['models']['baselines']['gpt5']['max_tokens'],
                 temperature=self.config['models']['baselines']['gpt5']['temperature']
@@ -78,16 +94,32 @@ class BaselineModels:
         """Generate contract using Claude Opus 4.1."""
         model_name = self.config['models']['baselines']['claude']['model']
         
+        # Enhanced prompt to match teacher-student capability
+        enhanced_prompt = f"""You are an expert in creating professional business documents and contracts.
+
+Task: {prompt}
+
+Approach this systematically:
+1. Analyze all requirements and constraints in the request
+2. Identify the document type and appropriate structure
+3. Include all specified elements (deadlines, technical requirements, pricing models, etc.)
+4. Ensure completeness - every requirement must be addressed
+5. Use professional language and industry-standard formatting
+
+Generate a complete, professional document that fully addresses all requirements. Think step-by-step to ensure nothing is missed.
+
+Output the document directly (no meta-commentary or explanations):"""
+        
         try:
             response = api_call_with_retry(
                 self.anthropic_client.messages.create,
                 model=model_name,
                 messages=[
-                    {"role": "user", "content": f"Generate a complete legal contract for: {prompt}"}
+                    {"role": "user", "content": enhanced_prompt}
                 ],
                 max_tokens=self.config['models']['baselines']['claude']['max_tokens'],
                 temperature=self.config['models']['baselines']['claude']['temperature'],
-                system="You are an expert legal contract writer. Generate professional, comprehensive contracts."
+                system="You are a professional document creator specializing in contracts, agreements, and business documentation."
             )
             
             return response.content[0].text.strip()

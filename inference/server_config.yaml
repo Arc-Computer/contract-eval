@@ -24,13 +24,13 @@ models:
     
 generation:
   teacher:
-    max_new_tokens: 32768
+    max_new_tokens: 8000  # Enough for detailed instructions with thinking
     temperature: 0.7
     top_p: 0.9
     do_sample: true
     
   student:
-    max_new_tokens: 32768
+    max_new_tokens: 8000  # Enough for comprehensive document sections
     temperature: 0.3
     top_p: 0.9
     do_sample: true
@@ -38,7 +38,7 @@ generation:
 performance:
   batch_size: 1
   max_concurrent_requests: 4
-  request_timeout: 120
+  request_timeout: 300  # 5 minutes per request for 8000 tokens
   enable_gpu_monitoring: true
   
 logging:

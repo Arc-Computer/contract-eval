@@ -5,6 +5,7 @@ import sys
 import time
 import logging
 import asyncio
+import re
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -210,26 +211,34 @@ def generate_teacher_instructions(
     
     try:
         
-        # Create the optimized teacher prompt
-        teacher_prompt = f"""You are an expert legal and business consultant specializing in contract generation and business documentation. Your role is to provide detailed, step-by-step strategic guidance for creating professional documents.
+        # Leverage the math-trained teacher's systematic reasoning strengths
+        teacher_prompt = f"""You are a systematic problem solver. Decompose this document creation task into optimal sequential steps, like solving a complex theorem.
 
-Given the following request, generate ONLY strategic thinking and planning steps. DO NOT write the actual contract or document itself.
+Task: {request.prompt}
 
-Your instructions must:
-1. Break down the task into clear, numbered steps (Step 1, Step 2, etc.)
-2. For each step, explain:
-   - What needs to be considered
-   - Key legal/business implications
-   - Risk factors to address
-   - Essential elements to include
-3. Provide strategic reasoning for each decision
-4. Identify potential challenges and mitigation strategies
-5. Suggest structure and organization approaches
+Apply systematic decomposition:
+1. Identify all requirements and constraints (like identifying given conditions)
+2. Determine the optimal sequence of construction (like proof steps)
+3. Ensure completeness - every requirement must be addressed
+4. Each step should build logically on previous steps
 
-Request: {request.prompt}
+Think of this like constructing a mathematical proof - each step must be necessary, sufficient, and lead to the complete solution.
 
-Generate comprehensive step-by-step planning instructions:
-Step 1:"""
+Format your solution as TEACHING INSTRUCTIONS between tags:
+
+<instructions>
+INSTRUCTION 1:
+[Specific directive for what to create/write, including exact requirements to address]
+
+INSTRUCTION 2:
+[Next specific directive, building on previous work]
+
+[Continue until the document is complete. Each instruction should be actionable and specific.]
+</instructions>
+
+Begin your instructions:
+<instructions>
+INSTRUCTION 1:"""
         
         # vLLM sampling parameters - optimized for speed
         gen_config = config['generation']['teacher']
@@ -287,17 +296,23 @@ def generate_student_contract(
         raise HTTPException(status_code=503, detail="Student model not initialized")
     
     try:
-        # Generate contract step by step - SAME LOGIC, just using vLLM for speed
+        # Generate contract step by step - Student as intelligent executor
         contract_parts = []
         
-        # Initial context for the student
-        initial_context = f"""You are a professional contract writer and business document specialist. You will receive step-by-step instructions from an expert consultant, and your task is to implement each step to build a complete, professional document.
+        # Student prompt designed to output ONLY document content
+        base_context = f"""COMPLETE REQUEST: {request.prompt}
 
-Original Request: {request.prompt}
+IMPORTANT: This is the full request. DO NOT attempt to fulfill everything at once. You will receive step-by-step instructions to build this document progressively.
 
-You will now receive instructions step by step. For each step, generate the corresponding section of the document."""
+CRITICAL RULES:
+1. Output ONLY the actual document text - no thinking, no explanations, no meta-commentary
+2. Write as if you are the document itself - direct, professional content only
+3. Each instruction builds toward the complete request - trust the process
+4. Your output goes directly into the final document - make it perfect
+
+You are writing the actual document, not describing what you're writing."""
         
-        accumulated_content = ""
+        accumulated_document = ""  # Only clean document text
         gen_config = config['generation']['student']
         
         # vLLM sampling parameters - optimized for speed
@@ -310,47 +325,69 @@ You will now receive instructions step by step. For each step, generate the corr
             stop=["<|endoftext|>", "<|assistant|>"]
         )
         
-        # Process each step sequentially - SAME AS BEFORE, each builds on previous
+        # Process each step sequentially - Student executes without outputting thinking
         for i, step in enumerate(request.teacher_steps, 1):
             logger.info(f"Processing step {i}/{len(request.teacher_steps)}: {step[:100]}...")
             
-            # Build progressive prompt with ACTUAL accumulated content from previous steps
-            step_prompt = f"""{initial_context}
+            # Build prompt with tag structure for clean output
+            if i == 1:
+                # First step - start fresh
+                step_prompt = f"""{base_context}
 
-Current Progress:
-{accumulated_content if accumulated_content else "[Beginning of document]"}
+INSTRUCTION: {step}
 
-Expert Instruction - Step {i} of {len(request.teacher_steps)}:
-{step}
+Begin writing the document. Output your content between tags:
+<document>
+[write here]
+</document>"""
+            else:
+                # Continue building - show what exists, add next part
+                step_prompt = f"""{base_context}
 
-Based on this instruction and the context above, generate the appropriate content for this step:
-- If Step 1: Begin with document header and initial structure
-- If middle step: Continue building on previous sections
-- If final step: Complete and conclude the document properly
+The document you are building (this is what you've written so far):
+---
+{accumulated_document}
+---
 
-Output for Step {i}:"""
+INSTRUCTION: {step}
+
+Continue building this document smoothly from where you left off. The new content should flow naturally from what's above. Output your continuation between tags:
+<document>
+[continue writing here]
+</document>"""
             
             logger.info(f"Step {i} - Prompt length: {len(step_prompt)} chars")
             logger.info(f"Step {i} - Starting vLLM generation with max_tokens={sampling_params.max_tokens}")
             
-            # Generate with vLLM - MUCH FASTER than transformers!
+            # Generate with vLLM
             outputs = student_llm.generate([step_prompt], sampling_params)
             generated_text = outputs[0].outputs[0].text
             
             logger.info(f"Step {i} - vLLM generated {len(generated_text)} characters")
             
-            # Extract the contract part (clean output)
-            contract_part = generated_text.strip()
+            # Extract content from document tags
+            # Look for content between <document> and </document> tags
+            tag_match = re.search(r'<document>(.*?)(?:</document>|$)', generated_text, re.DOTALL)
             
-            # Remove any artifacts if present
-            if f"Output for Step {i}:" in contract_part:
-                contract_part = contract_part.split(f"Output for Step {i}:")[-1].strip()
+            if tag_match:
+                # Found tags - extract clean content
+                clean_text = tag_match.group(1).strip()
+                logger.info(f"Step {i} - Extracted {len(clean_text)} chars from document tags")
+            else:
+                # Fallback if no tags found (shouldn't happen with proper prompting)
+                logger.warning(f"Step {i} - No document tags found, using raw output")
+                clean_text = generated_text.strip()
+                # Try to clean obvious artifacts
+                if clean_text.startswith("Output:") or clean_text.startswith("Document:"):
+                    clean_text = clean_text.split(":", 1)[1].strip()
             
-            contract_parts.append(contract_part)
+            contract_parts.append(clean_text)
             
-            # Update accumulated content with ACTUAL output for next step
-            # This is CRITICAL - next step must see what was actually generated
-            accumulated_content += f"\n[Step {i} Output]:\n{contract_part}\n"
+            # Update accumulated document with ONLY clean document text
+            if accumulated_document:
+                accumulated_document += "\n\n" + clean_text
+            else:
+                accumulated_document = clean_text
             
             logger.info(f"Completed step {i}/{len(request.teacher_steps)}")
         

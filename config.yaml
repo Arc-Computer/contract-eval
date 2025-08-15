@@ -6,7 +6,7 @@ inference_mode: "api"
 inference_api:
   endpoint: "http://localhost:8000"  # FastAPI server on same machine
   api_key: ""  # No auth needed for localhost
-  timeout: 600  # Increased to 10 minutes for large generations
+  timeout: 900  # 15 minutes for 8000 token generations
   max_retries: 3
 
 api_keys:
@@ -19,24 +19,24 @@ models:
   teacher:
     repo_id: "aman-jaglan/et-8b"
     device: "cuda"
-    max_new_tokens: 500  # Reduced for testing
+    max_new_tokens: 8000  # Enough space for comprehensive instructions
     temperature: 0.7
     
   student:
     model_name: "Qwen/Qwen3-8B"
     provider: "together"  # or "huggingface"
-    max_new_tokens: 1000  # Reduced for testing
+    max_new_tokens: 8000  # Enough space for detailed document generation
     temperature: 0.3
     
   baselines:
     gpt5:
       model: "gpt-5"  # GPT-5 released August 2025, using main reasoning model
       temperature: 0.3
-      max_tokens: 1000  # Reduced for testing
+      max_tokens: 8000  # Match teacher-student capacity
     claude:
       model: "claude-opus-4-1-20250805"  # Claude Opus 4.1 released August 5, 2025
       temperature: 0.3
-      max_tokens: 1000  # Reduced for testing
+      max_tokens: 8000  # Match teacher-student capacity
       
   judge:
     model: "gemini-2.5-pro"  # Gemini 2.5 Pro stable version with thinking capabilities

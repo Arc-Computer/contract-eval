@@ -60,40 +60,44 @@ def load_checkpoint(checkpoint_path: str) -> tuple:
     return results, last_idx
 
 def extract_steps_from_thinking(thinking_text: str) -> list:
-    """Extract step-by-step instructions from teacher's thinking."""
-    steps = []
+    """Extract INSTRUCTION blocks from teacher's output using tags."""
+    import re
     
-    # Try to find numbered steps
-    lines = thinking_text.split('\n')
-    current_step = []
+    instructions = []
     
-    for line in lines:
-        # Check for numbered steps (1., 2., etc.) or bullet points
-        if any(line.strip().startswith(f"{i}.") for i in range(1, 20)):
-            if current_step:
-                steps.append('\n'.join(current_step).strip())
-            current_step = [line]
-        elif line.strip().startswith("•") or line.strip().startswith("-"):
-            if current_step:
-                steps.append('\n'.join(current_step).strip())
-            current_step = [line]
-        elif current_step:
-            current_step.append(line)
+    # First, extract content from instruction tags
+    tag_match = re.search(r'<instructions>(.*?)(?:</instructions>|$)', thinking_text, re.DOTALL)
     
-    # Add the last step
-    if current_step:
-        steps.append('\n'.join(current_step).strip())
+    if tag_match:
+        instructions_content = tag_match.group(1)
+        
+        # Split by INSTRUCTION markers
+        parts = instructions_content.split('INSTRUCTION ')
+        
+        for part in parts[1:]:  # Skip first part before any INSTRUCTION
+            # Each part starts with the instruction number
+            instruction_text = part.strip()
+            
+            # Remove the number and colon at the start
+            if ':' in instruction_text:
+                instruction_text = instruction_text.split(':', 1)[1].strip()
+            
+            # Clean up any placeholders
+            instruction_text = instruction_text.replace('[', '').replace(']', '')
+            
+            # Stop at next instruction or end
+            if 'INSTRUCTION' in instruction_text:
+                instruction_text = instruction_text.split('INSTRUCTION')[0].strip()
+            
+            if instruction_text:
+                instructions.append(instruction_text)
     
-    # If no structured steps found, split by paragraphs
-    if not steps:
-        paragraphs = thinking_text.split('\n\n')
-        steps = [p.strip() for p in paragraphs if p.strip()]
+    # Validate we got instructions
+    if not instructions:
+        # Fatal error - teacher didn't format correctly
+        raise ValueError(f"Teacher failed to generate valid instructions. Output was: {thinking_text[:500]}")
     
-    # Ensure we have at least one step
-    if not steps:
-        steps = [thinking_text]
-    
-    return steps
+    return instructions
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def api_call_with_retry(func, *args, **kwargs):
