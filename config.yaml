@@ -1,0 +1,61 @@
+# Configuration for Contract Generation Evaluation
+
+# Inference mode: "api" for GPU server, "local" for local execution, "hybrid" for API with local fallback
+inference_mode: "api"
+
+inference_api:
+  endpoint: "http://localhost:8000"  # FastAPI server on same machine
+  api_key: ""  # No auth needed for localhost
+  timeout: 120
+  max_retries: 3
+
+api_keys:
+  openai: "YOUR_OPENAI_API_KEY"
+  anthropic: "YOUR_ANTHROPIC_API_KEY"
+  google: "YOUR_GOOGLE_API_KEY"
+  together: "YOUR_TOGETHER_API_KEY"  # Only used if inference_mode is "local" for student
+
+models:
+  teacher:
+    repo_id: "aman-jaglan/et-8b"
+    device: "cuda"
+    max_new_tokens: 32768
+    temperature: 0.7
+    
+  student:
+    model_name: "Qwen/Qwen3-8B"
+    provider: "together"  # or "huggingface"
+    max_new_tokens: 32768
+    temperature: 0.3
+    
+  baselines:
+    gpt5:
+      model: "gpt-4o"  # Update when GPT-5 is available
+      temperature: 0.3
+      max_tokens: 32768
+    claude:
+      model: "claude-3-5-sonnet-20241022"  # Using latest available, update to Opus 4.1 when available
+      temperature: 0.3
+      max_tokens: 32768
+      
+  judge:
+    model: "gemini-2.0-flash-exp"
+    temperature: 0.1
+    
+dataset:
+  repo_id: "Jarrodbarnes/rcl-specialized-teacher-enterprise"
+  split: "train"
+  num_examples: 99  # Using last 99 examples (500-599) not used in SFT training
+  
+evaluation:
+  checkpoint_interval: 10
+  save_intermediate: true
+  batch_size: 1
+  timeout_seconds: 60
+  max_retries: 3
+  
+paths:
+  results_dir: "./results"
+  checkpoints_dir: "./results/checkpoints"
+  final_report: "./results/final_report.json"
+  logs_dir: "./logs"

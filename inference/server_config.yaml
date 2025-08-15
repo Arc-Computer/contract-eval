@@ -1,0 +1,48 @@
+# Inference Server Configuration
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1
+  api_key: ""  # Not needed for localhost
+  enable_auth: false  # Disabled for local execution
+  cors_origins: ["*"]  # Configure for production
+
+models:
+  teacher:
+    repo_id: "aman-jaglan/et-8b"
+    device_map: "auto"  # Will use both GPUs
+    load_in_8bit: false
+    max_memory: {0: "70GB", 1: "70GB"}  # For 2xH100
+    offload_folder: "/tmp/offload"
+    
+  student:
+    repo_id: "Qwen/Qwen3-8B"
+    device_map: "auto"
+    load_in_8bit: false
+    trust_remote_code: true
+    
+generation:
+  teacher:
+    max_new_tokens: 32768
+    temperature: 0.7
+    top_p: 0.9
+    do_sample: true
+    
+  student:
+    max_new_tokens: 32768
+    temperature: 0.3
+    top_p: 0.9
+    do_sample: true
+    
+performance:
+  batch_size: 1
+  max_concurrent_requests: 4
+  request_timeout: 120
+  enable_gpu_monitoring: true
+  
+logging:
+  level: "INFO"
+  log_file: "inference_server.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
