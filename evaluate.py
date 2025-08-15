@@ -104,7 +104,9 @@ class ContractEvaluator:
         try:
             # Phase 1: Teacher generates step-by-step instructions
             logger.info("Phase 1: Teacher generating instructions...")
+            logger.info(f"EVAL: Sending prompt to teacher: {example['prompt'][:100]}...")
             teacher_steps = self.teacher.generate_instructions(example['prompt'])
+            logger.info(f"EVAL: Received {len(teacher_steps)} steps from teacher")
             result['teacher_steps'] = teacher_steps
             result['num_steps'] = len(teacher_steps)
             

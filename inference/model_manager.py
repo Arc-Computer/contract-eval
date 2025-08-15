@@ -56,7 +56,7 @@ class ModelManager:
         torch.cuda.empty_cache()
         
     def load_teacher_model(self) -> Tuple[Any, Any]:
-        """Load the teacher model with distributed checkpoints."""
+        """Load the teacher model - using Arc-Intelligence model directly."""
         if self.teacher_model is not None:
             logger.info("Teacher model already loaded")
             return self.teacher_model, self.teacher_tokenizer
@@ -67,74 +67,36 @@ class ModelManager:
         try:
             config_dict = self.config['models']['teacher']
             
-            # Download checkpoint files
-            logger.info("Downloading teacher model checkpoints...")
-            repo_id = config_dict['repo_id']
+            # Use Arc-Intelligence teacher model directly
+            logger.info("Loading Arc-Intelligence teacher model directly from HuggingFace...")
+            model_id = "Arc-Intelligence/arc-teacher-8b"
             
-            model_0_path = hf_hub_download(
-                repo_id=repo_id,
-                filename="checkpoints/model_world_size_2_rank_0.pt",
-                cache_dir="./model_cache"
+            # Load tokenizer
+            self.teacher_tokenizer = AutoTokenizer.from_pretrained(
+                model_id,
+                trust_remote_code=True
             )
-            model_1_path = hf_hub_download(
-                repo_id=repo_id,
-                filename="checkpoints/model_world_size_2_rank_1.pt",
-                cache_dir="./model_cache"
-            )
-            
-            # Load and merge checkpoints
-            logger.info("Merging distributed checkpoints...")
-            model_0 = torch.load(model_0_path, map_location='cpu')
-            model_1 = torch.load(model_1_path, map_location='cpu')
-            
-            merged_state_dict = {}
-            merged_state_dict.update(model_0)
-            merged_state_dict.update(model_1)
-            
-            # Clear the individual checkpoints from memory
-            del model_0, model_1
-            gc.collect()
-            
-            # Load config and tokenizer from the base model
-            base_model = "Arc-Intelligence/arc-teacher-8b"
-            config = AutoConfig.from_pretrained(base_model)
-            self.teacher_tokenizer = AutoTokenizer.from_pretrained(base_model)
             
             if self.teacher_tokenizer.pad_token is None:
                 self.teacher_tokenizer.pad_token = self.teacher_tokenizer.eos_token
             
-            # Initialize model with device map for multi-GPU
+            # Load model with appropriate settings
             device_map = config_dict.get('device_map', 'auto')
             max_memory = config_dict.get('max_memory', None)
             
-            logger.info(f"Initializing teacher model with device_map={device_map}")
+            logger.info(f"Loading model with device_map={device_map}")
             
-            self.teacher_model = AutoModelForCausalLM.from_config(config)
-            self.teacher_model.load_state_dict(merged_state_dict, strict=False)
-            
-            # Move to GPUs with device map
-            if device_map == 'auto' and self.gpu_count > 1:
-                from accelerate import dispatch_model, infer_auto_device_map
-                
-                # Create device map for multi-GPU
-                device_map = infer_auto_device_map(
-                    self.teacher_model,
-                    max_memory=max_memory,
-                    no_split_module_classes=["LlamaDecoderLayer"]
-                )
-                
-                self.teacher_model = dispatch_model(
-                    self.teacher_model,
-                    device_map=device_map,
-                    offload_folder=config_dict.get('offload_folder', None)
-                )
-            else:
-                self.teacher_model = self.teacher_model.cuda()
+            # Load the model directly from HuggingFace
+            self.teacher_model = AutoModelForCausalLM.from_pretrained(
+                model_id,
+                torch_dtype=torch.float16,
+                device_map=device_map,
+                max_memory=max_memory,
+                trust_remote_code=True,
+                cache_dir="./model_cache"
+            )
             
             self.teacher_model.eval()
-            
-            # Clear memory
-            del merged_state_dict
             self.clear_gpu_cache()
             
             load_time = time.time() - start_time

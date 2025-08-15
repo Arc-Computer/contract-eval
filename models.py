@@ -4,6 +4,7 @@ import sys
 import logging
 from typing import Dict, Any, List
 from pathlib import Path
+from openai import OpenAI
 import openai
 import anthropic
 import google.generativeai as genai
@@ -47,17 +48,17 @@ class BaselineModels:
         self.config = config
         
         # Initialize API clients
-        openai.api_key = config['api_keys']['openai']
+        self.openai_client = openai.OpenAI(api_key=config['api_keys']['openai'])
         self.anthropic_client = anthropic.Anthropic(api_key=config['api_keys']['anthropic'])
         genai.configure(api_key=config['api_keys']['google'])
         
     def generate_gpt5(self, prompt: str) -> str:
-        """Generate contract using GPT-5 (or current best available)."""
+        """Generate contract using GPT-5."""
         model_name = self.config['models']['baselines']['gpt5']['model']
         
         try:
             response = api_call_with_retry(
-                openai.chat.completions.create,
+                self.openai_client.chat.completions.create,
                 model=model_name,
                 messages=[
                     {"role": "system", "content": "You are an expert legal contract writer. Generate professional, comprehensive contracts."},
@@ -74,7 +75,7 @@ class BaselineModels:
             return f"[Error: {str(e)}]"
     
     def generate_claude(self, prompt: str) -> str:
-        """Generate contract using Claude Opus 4.1 (or current best available)."""
+        """Generate contract using Claude Opus 4.1."""
         model_name = self.config['models']['baselines']['claude']['model']
         
         try:

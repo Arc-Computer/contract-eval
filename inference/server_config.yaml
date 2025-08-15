@@ -17,7 +17,7 @@ models:
     offload_folder: "/tmp/offload"
     
   student:
-    repo_id: "Qwen/Qwen3-8B"
+    repo_id: "Qwen/Qwen3-8B"  # Same base model as teacher
     device_map: "auto"
     load_in_8bit: false
     trust_remote_code: true

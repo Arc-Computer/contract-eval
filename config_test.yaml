@@ -1,0 +1,49 @@
+api_keys:
+  anthropic: YOUR_ANTHROPIC_API_KEY
+  google: YOUR_GOOGLE_API_KEY
+  openai: YOUR_OPENAI_API_KEY
+  together: YOUR_TOGETHER_API_KEY
+dataset:
+  num_examples: 5
+  repo_id: Jarrodbarnes/rcl-specialized-teacher-enterprise
+  split: train
+evaluation:
+  batch_size: 1
+  checkpoint_interval: 2
+  max_retries: 3
+  save_intermediate: true
+  timeout_seconds: 60
+inference_api:
+  api_key: ''
+  endpoint: http://localhost:8000
+  max_retries: 3
+  timeout: 600
+inference_mode: api
+models:
+  baselines:
+    claude:
+      max_tokens: 1000
+      model: claude-opus-4-1-20250805
+      temperature: 0.3
+    gpt5:
+      max_tokens: 1000
+      model: gpt-5
+      temperature: 0.3
+  judge:
+    model: gemini-2.5-pro
+    temperature: 0.1
+  student:
+    max_new_tokens: 1000
+    model_name: Qwen/Qwen3-8B
+    provider: together
+    temperature: 0.3
+  teacher:
+    device: cuda
+    max_new_tokens: 500
+    repo_id: aman-jaglan/et-8b
+    temperature: 0.7
+paths:
+  checkpoints_dir: ./results/checkpoints
+  final_report: ./results/final_report.json
+  logs_dir: ./logs
+  results_dir: ./results

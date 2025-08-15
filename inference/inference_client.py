@@ -44,6 +44,11 @@ class InferenceClient:
     ) -> List[str]:
         """Generate teacher instructions."""
         
+        logger.info(f"CLIENT: Preparing teacher generation request")
+        logger.info(f"CLIENT: URL: {self.base_url}/teacher/generate")
+        logger.info(f"CLIENT: Max tokens: {max_tokens}, Temp: {temperature}, Top-p: {top_p}")
+        logger.info(f"CLIENT: Timeout: {self.timeout} seconds")
+        
         payload = {
             "prompt": prompt,
             "max_tokens": max_tokens,
@@ -52,19 +57,25 @@ class InferenceClient:
         }
         
         try:
+            logger.info(f"CLIENT: Sending POST request to teacher endpoint...")
             response = requests.post(
                 f"{self.base_url}/teacher/generate",
                 json=payload,
                 headers=self.headers,
                 timeout=self.timeout
             )
+            logger.info(f"CLIENT: Response received! Status: {response.status_code}")
             response.raise_for_status()
             
             result = response.json()
+            logger.info(f"CLIENT: Got {result.get('num_steps', 0)} steps from teacher")
             return result['steps']
             
+        except requests.exceptions.Timeout as e:
+            logger.error(f"CLIENT: Request timed out after {self.timeout} seconds!")
+            raise
         except requests.exceptions.RequestException as e:
-            logger.error(f"Teacher generation request failed: {e}")
+            logger.error(f"CLIENT: Teacher generation request failed: {e}")
             raise
     
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
